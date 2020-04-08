@@ -40,18 +40,18 @@ const repeat = (func) => new Promise(resolve => {
         console.log();
 
         // Create asset
-        process.stdout.write('\nCreating verification asset.')
-        //from, note, total, decimals, defaultFrozen, manager, reserve, freeze,
-        //                             clawback, unitName, assetName, assetURL, assetMetadataHash, suggestedParams
-        const createTxn = algosdk.makeAssetCreateTxnWithSuggestedParams(
+        process.stdout.write('\nCreating verification asset.');
+        const params = await algod.getTransactionParams();
+        const createTxn = algosdk.makeAssetCreateTxn(
             account.addr,
-            undefined, 1e6, 0, true,
+            params.fee, params.lastRound, params.lastRound + 50,
+            undefined, params.genesishashb64, params.genesisID,
+            1e6, 0, false,
             account.addr, account.addr,
             account.addr, account.addr,
             account.addr.substring(0, 8),
             'a2f-' + account.addr.substring(0, 8),
-            'https://algorand.com', undefined,
-            await algod.getTransactionParams()
+            'https://algorand.com', undefined
         );
         const sCreateTxn = createTxn.signTxn(account.sk);
         await algod.sendRawTransaction(sCreateTxn);
@@ -90,10 +90,12 @@ const repeat = (func) => new Promise(resolve => {
 
     const providers = () => {
         console.log('Authorized Providers:');
-        data.providers.forEach(provider => console.log('  ' + provider));
+        Object.keys(data.providers).forEach(provider => console.log('  ' + provider));
     }
 
     const add = async () => {
+        console.log('\nYour code (asset id) is: ' + data.asset);
+        console.log('This will be required for setup.\n');
         process.stdout.write('Waiting for provider information.');
         let lastCheck = -1;
         const provider = await repeat(async () => {
@@ -131,6 +133,19 @@ const repeat = (func) => new Promise(resolve => {
 
         console.log("Approved.");
         data.providers[provider.name] = provider.address;
+
+        const params = await algod.getTransactionParams();
+        const approvalTxn = algosdk.makeAssetTransferTxn(
+            data.account.addr, provider.address,
+            undefined, undefined,
+            params.fee, 0,
+            params.lastRound, params.lastRound + 1000,
+            undefined, params.genesishashb64, params.genesisID,
+            data.asset
+        );
+
+        const sApprovalTxn = approvalTxn.signTxn(data.account.sk);
+        await algod.sendRawTransaction(sApprovalTxn);
     }
 
     const remove = (args) => {
@@ -147,16 +162,20 @@ const repeat = (func) => new Promise(resolve => {
         else if (data.providers[args[0]] === undefined)
             console.log('Unknown provider ' + args[0] + '');
         else {
+            const params = await algod.getTransactionParams();
             const providerAddress = data.providers[args[0]];
-            const verifyTxn = algosdk.makeAssetTransferTxnWithSuggestedParams(
+
+            const verifyTxn = algosdk.makeAssetTransferTxn(
                 data.account.addr, providerAddress,
                 undefined, undefined,
-                1, undefined, data.asset,
-                await algod.getTransactionParams()
+                params.fee, 1,
+                params.lastRound, params.lastRound + 50,
+                undefined, params.genesishashb64, params.genesisID, data.asset
             );
 
             const sVerifyTxn = verifyTxn.signTxn(data.account.sk);
-            await algod.sendRawTransaction(sVerifyTxn);
+            await (algod.sendRawTransaction(sVerifyTxn).catch(e => console.error(e)));
+            console.log('Sent verification to provider.')
         }
     }
 
@@ -185,11 +204,11 @@ const repeat = (func) => new Promise(resolve => {
             await add();
             break;
         case 'remove':
-            remove();
+            remove(args.slice(1));
             break;
         case 'verify':
         case 'approve':
-            await verify();
+            await verify(args.slice(1));
             break;
         case 'debug':
             await debug(args.slice(1));

@@ -5,6 +5,18 @@
     <title>Algorand 2 Factor Demo</title>
 </head>
 <body>
-<h1>restricted</h1>
+<h1>logged in</h1>
+<p>Hello, <span id="name">anonymous</span></p>
+<button onclick="logout()">Logout</button>
+
+<script>
+    function logout() {
+        document.cookie = 'a2f=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        window.location.reload();
+    }
+
+    const name = document.cookie.split('=')[1];
+    document.getElementById('name').innerText = name;
+</script>
 </body>
 </html>
