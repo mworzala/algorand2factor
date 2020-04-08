@@ -1,0 +1,27 @@
+{
+  "name": "provider",
+  "version": "1.0.0",
+  "description": "An example provider for an Algorand 2 factor implementation",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "gen-account": "node generate.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mworzala/algorand2factor.git"
+  },
+  "keywords": [
+    "algorand"
+  ],
+  "author": "Matt Worzala",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mworzala/algorand2factor/issues"
+  },
+  "homepage": "https://github.com/mworzala/algorand2factor#readme",
+  "dependencies": {
+    "algosdk": "^1.5.0",
+    "express": "^4.17.1"
+  }
+}

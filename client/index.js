@@ -97,6 +97,7 @@ const repeat = (func) => new Promise(resolve => {
         process.stdout.write('Waiting for provider information.');
         let lastCheck = -1;
         const provider = await repeat(async () => {
+            process.stdout.write('.');
             const params = await algod.getTransactionParams();
             if (lastCheck === -1)
                 lastCheck = params.lastRound - 1;
@@ -118,12 +119,13 @@ const repeat = (func) => new Promise(resolve => {
                 };
             }
         });
+        console.log();
 
         const auth = await new Promise(
             resolve => rl.question('Provider \'' + provider.name + '\' has initiated authorization. Accept provider? (y/n)',
                     ans => resolve(ans.toLowerCase() === 'y')));
         if (!auth) {
-            console.log('Ignored.')
+            console.log('Ignored.');
             return await add();
         }
 
