@@ -47,8 +47,7 @@ const repeat = (func) => new Promise(resolve => {
             params.fee, params.lastRound, params.lastRound + 50,
             undefined, params.genesishashb64, params.genesisID,
             1e6, 0, false,
-            account.addr, account.addr,
-            account.addr, account.addr,
+            account.addr, '', account.addr, account.addr,
             account.addr.substring(0, 8),
             'a2f-' + account.addr.substring(0, 8),
             'https://algorand.com', undefined
