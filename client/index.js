@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// client index.js
 
 const algosdk = require('algosdk');
 const {getHomeFolder} = require('platform-folders');
@@ -50,7 +51,7 @@ const repeat = (func) => new Promise(resolve => {
             account.addr, '', account.addr, account.addr,
             account.addr.substring(0, 8),
             'a2f-' + account.addr.substring(0, 8),
-            'https://algorand.com', undefined
+            'https://github.com/mworzala/algorand2factor', undefined
         );
         const sCreateTxn = createTxn.signTxn(account.sk);
         await algod.sendRawTransaction(sCreateTxn);
@@ -174,7 +175,7 @@ const repeat = (func) => new Promise(resolve => {
 
             const sVerifyTxn = verifyTxn.signTxn(data.account.sk);
             await (algod.sendRawTransaction(sVerifyTxn).catch(e => console.error(e)));
-            console.log('Sent verification to provider.')
+            console.log('Sent verification to provider.');
         }
     }
 

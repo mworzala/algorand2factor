@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
     else res.sendFile('default.html', { root: publicDir });
 });
 
-app.use(express.static('public'));
+app.get('/default.js', (req, res) => res.sendFile('default.js', { root: publicDir }));
 
 const server = app.listen(3000, () => {
     console.log('Example Provider');
@@ -39,10 +39,7 @@ const server = app.listen(3000, () => {
     console.log('URL: http://127.0.0.1:3000/');
 });
 
-const createServer = new WebSocket.Server({
-    server,
-    path: '/account'
-});
+const createServer = new WebSocket.Server({ server, path: '/account' });
 
 createServer.on('connection', ws => {
     /*
@@ -180,6 +177,4 @@ createServer.on('connection', ws => {
                 ws.close(40004, "Timeout");
         } else ws.close(4000, 'Unknown message type: ' + data.type);
     })
-
-    ws.send('hello, world');
 });
