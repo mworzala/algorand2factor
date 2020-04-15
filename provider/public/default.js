@@ -1,9 +1,9 @@
 // provider public default.js
 
+// References to page elements
 const nameInput = document.getElementById('create-username');
 const codeInput = document.getElementById('create-code');
 const createButton = document.getElementById('create-button');
-
 const loginInput = document.getElementById('login-username');
 const loginButton = document.getElementById('login-button')
 

@@ -11,6 +11,8 @@ const ALGOD_TOKEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 const PROVIDER_NAME = 'test_provider'
 
+// Ensure the provider mnemonic is set, or exit immediately.
+// It is assumed that the provider account has a balance.
 if (!process.env.PROVIDER_MNEMONIC) {
     console.error('Missing provider account (hint: set the PROVIDER_MNEMONIC environment variable).');
     process.exit(1);
@@ -20,16 +22,22 @@ const publicDir = join(__dirname, 'public');
 const app = express();
 const algod = new algosdk.Algod(ALGOD_TOKEN, ALGOD_ADDRESS, ALGOD_PORT);
 const account = algosdk.mnemonicToSecretKey(process.env.PROVIDER_MNEMONIC);
+// Notably we are only keeping track of the accounts so long as the process is alive.
 const accounts = {};
 
 app.use(require('cookie-parser')());
 
 app.get('/', (req, res) => {
+    // This system for determining whether the user is logged in is for demonstration only,
+    // and it should not be used in production.
+    // Since we are only checking for the existence of this cookie, anybody could set the cookie from the browser,
+    // and pretend to be logged in.
     if (req.cookies.a2f)
         res.sendFile('restricted.html', { root: publicDir });
     else res.sendFile('default.html', { root: publicDir });
 });
 
+// Provide the homepage javascript.
 app.get('/default.js', (req, res) => res.sendFile('default.js', { root: publicDir }));
 
 const server = app.listen(3000, () => {
@@ -39,9 +47,10 @@ const server = app.listen(3000, () => {
     console.log('URL: http://127.0.0.1:3000/');
 });
 
-const createServer = new WebSocket.Server({ server, path: '/account' });
+// Create a websocket server using the HTTPServer created by Express.
+const wss = new WebSocket.Server({ server, path: '/account' });
 
-createServer.on('connection', ws => {
+wss.on('connection', ws => {
     /*
     Close Codes:
     4000: unknown error
@@ -54,6 +63,7 @@ createServer.on('connection', ws => {
     ws.on('message', async msg => {
         const data = JSON.parse(msg);
 
+        // Create a new account.
         if (data.type === 'create') {
             const { name, asset } = data;
 
@@ -125,19 +135,22 @@ createServer.on('connection', ws => {
             }, 4000);
 
             if (count === 150) ws.close(4002, 'Timeout');
+
+        // Log in to an existing account.
         } else if (data.type === 'login') {
             const { name } = data;
 
+            // Ensure an account exists with the provided name.
             const asset = accounts[name];
             if (asset === undefined) {
                 ws.close(4004, 'Unknown account: ' + name);
                 return;
             }
 
+            // Get the asset information, more importantly the creator of the asset (the account logging in)
             const assetInfo = await algod.assetInformation(asset);
 
-            console.log('Found account, waiting for verification')
-
+            // The following loop is a rolling check of all transactions after it is started, up to a timeout of 150 checks (roughly every 4 seconds meaning the timeout is ~10 minutes).
             let lastCheck = -1, count = 0;
             const task = setInterval(async () => {
                 if (++count === 150)
@@ -153,6 +166,11 @@ createServer.on('connection', ws => {
                     return;
                 for (let i = 0; i < txns.transactions.length; i++) {
                     const txn = txns.transactions[i];
+                    // Exit if there is:
+                    //    An asset transfer (axfer)
+                    //    From the asset creator (the client)
+                    //    To the provider account
+                    //    With an amount of 1
                     if (txn.type !== 'axfer' || txn.from !== assetInfo.creator || txn.curxfer.rcv !== account.addr || txn.curxfer.amt !== 1)
                         continue;
 
@@ -160,7 +178,8 @@ createServer.on('connection', ws => {
                     console.log('Account \'' + name + '\' has logged in.');
                     ws.close(4003, name);
 
-                    // return asset
+                    // Return the asset to the client
+                    // See the accompanying article for issues related to this implementation.
                     const returnTxn = algosdk.makeAssetTransferTxn(
                         account.addr, assetInfo.creator,
                         undefined, undefined,
